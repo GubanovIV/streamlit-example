@@ -2,45 +2,46 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
+import pyaudio
+import wave
+import openai-whisper
 
-"""
-# Welcome to Streamlit!
-
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
-
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
-
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
-
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
-
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
-
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
-
-st.button('Play', type='primary')
-if st.button('Say hello'):
-    st.write('Why hello there')
-else:
-    st.write('Goodbye')
-
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+if st.button('Начать запись'):
+    chunk = 1024 # Запись кусками по 1024 сэмпла
+    sample_format = pyaudio.paInt16 # 16 бит на выборку
+    channels = 2
+    rate = 44100 # Запись со скоростью 44100 выборок(samples) в секунду
+    seconds = 5
+    filename = "output_sound.wav"
+    p = pyaudio.PyAudio() # Создать интерфейс для PortAudio
+    
+    st.write('Запись...')
+    
+    stream = p.open(format=sample_format,
+    channels=channels,
+    rate=rate,
+    frames_per_buffer=chunk,
+    input_device_index=2, # индекс устройства с которого будет идти запись звука 
+    input=True)
+    
+    frames = [] # Инициализировать массив для хранения кадров
+    
+    # Хранить данные в блоках в течение 3 секунд
+    for i in range(0, int(rate / chunk * seconds)):
+        data = stream.read(chunk)
+        frames.append(data)
+    
+    # Остановить и закрыть поток
+    stream.stop_stream()
+    stream.close()
+    # Завершить интерфейс PortAudio
+    p.terminate()
+    
+    st.write('Запись закончена')
+    
+    wf = wave.open(filename, 'wb')
+    wf.setnchannels(channels)
+    wf.setsampwidth(p.get_sample_size(sample_format))
+    wf.setframerate(rate)
+    wf.writeframes(b''.join(frames))
+    wf.close()
