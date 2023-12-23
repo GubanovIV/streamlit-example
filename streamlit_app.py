@@ -30,7 +30,11 @@ df = pd.DataFrame({
     "rand": np.random.randn(num_points),
 })
 
-st.write(df)
+st.button('Play', type='primary')
+if st.button('Say hello'):
+    st.write('Why hello there')
+else:
+    st.write('Goodbye')
 
 st.altair_chart(alt.Chart(df, height=700, width=700)
     .mark_point(filled=True)
